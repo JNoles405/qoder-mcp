@@ -13,7 +13,7 @@ export function registerWrites(server, sb) {
         status: z
           .string()
           .optional()
-          .describe("One of: planning | active | beta | released | archived (default: planning)"),
+          .describe("One of: planning | in-dev | beta | released | archived (default: planning)"),
         tech_stack: z
           .array(z.string())
           .optional()

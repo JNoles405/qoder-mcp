@@ -73,7 +73,7 @@ Qoder uses `position` columns on orderable children (todos, notes, ideas, versio
 
 ### Status columns
 
-Projects: `planning | active | beta | released | archived`. Issues: `open | fixed | wontfix`. Sprints: `active | ...`. These string values are not validated by zod — the server passes them through to Supabase and lets the DB (or RLS policy) reject bad values. That matches the Electron app's approach.
+Projects: `planning | in-dev | beta | released | archived` (authoritative list in `App/src/constants.js` → `STATUS_CONFIG`). Issues: `open | fixed | wontfix`. Sprints: `active | ...`. These string values are not validated by zod — the server passes them through to Supabase and lets the DB (or RLS policy) reject bad values. That matches the Electron app's approach.
 
 ## 6. What changed and why
 
@@ -81,7 +81,7 @@ Projects: `planning | active | beta | released | archived`. Issues: `open | fixe
 
 ## 7. Traps already paid for
 
-- *(none yet — add here when something costs real time)*
+- **The project status is `in-dev`, not `active`.** The v0.1 scaffold documented the status enum as `planning | active | beta | released | archived` in the tool descriptions — but the Electron app's `STATUS_CONFIG` in `App/src/constants.js` uses `in-dev` for the active-development state, and that is what every row in the database has. A user filtering `list_projects` by `status: "active"` got an empty result. Fixed in a follow-up commit; the lesson is to read `STATUS_CONFIG` as the authoritative list before documenting any enum, not to guess from Supabase column names.
 
 ## 8. How things are verified
 

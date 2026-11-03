@@ -11,7 +11,7 @@ export function registerReads(server, sb) {
         status: z
           .string()
           .optional()
-          .describe("Filter by status: planning | active | beta | released | archived"),
+          .describe("Filter by status: planning | in-dev | beta | released | archived"),
       },
     },
     async ({ status }) => {
