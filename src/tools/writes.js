@@ -227,6 +227,38 @@ export function registerWrites(server, sb) {
       return json({ created: row });
     },
   );
+
+  server.registerTool(
+    "add_workspace_idea",
+    {
+      title: "Add workspace idea",
+      description:
+        "Add an idea to the user's global workspace (the cross-project idea bank shown under Workspace > Ideas in the Qoder app). Not scoped to any project. Prepends to the list, matching the app.",
+      inputSchema: {
+        content: z.string().describe("Idea text"),
+      },
+    },
+    async ({ content }) => {
+      const row = await sb.getUserSettings();
+      const workspace = row?.workspace_data || { notes: [], ideas: [], snippets: [] };
+      const next = {
+        notes: workspace.notes || [],
+        ideas: workspace.ideas || [],
+        snippets: workspace.snippets || [],
+      };
+      const idea = {
+        // Match the Electron app's id shape (Date.now()+"") but add 6 random chars so
+        // two MCP writes in the same millisecond don't collide.
+        id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        content,
+        pinned: false,
+        createdAt: new Date().toISOString(),
+      };
+      next.ideas = [idea, ...next.ideas];
+      await sb.upsertUserSettings({ workspace_data: next });
+      return json({ created: idea });
+    },
+  );
 }
 
 function json(data) {

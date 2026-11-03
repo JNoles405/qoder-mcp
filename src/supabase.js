@@ -127,4 +127,36 @@ export class SupabaseClient {
       throw new Error(`DELETE ${table} failed: ${msg}`);
     }
   }
+
+  // Read the signed-in user's user_settings row (holds workspace_data etc.).
+  // Returns null if the row doesn't exist yet.
+  async getUserSettings() {
+    await this._ensureFresh();
+    const r = await fetch(
+      `${this.url}/rest/v1/user_settings?user_id=eq.${encodeURIComponent(this.userId)}`,
+      { headers: headers(this.anonKey, this.token) },
+    );
+    const data = await r.json().catch(() => []);
+    if (!r.ok) throw new Error(data.message || `GET user_settings failed (${r.status})`);
+    return Array.isArray(data) && data.length ? data[0] : null;
+  }
+
+  // Upsert partial fields into the signed-in user's user_settings row.
+  // Mirrors the Electron app's sb.upsertSettings: Prefer resolution=merge-duplicates
+  // on the (user_id) unique constraint.
+  async upsertUserSettings(patch) {
+    await this._ensureFresh();
+    const body = { user_id: this.userId, ...patch };
+    const r = await fetch(`${this.url}/rest/v1/user_settings`, {
+      method: "POST",
+      headers: {
+        ...headers(this.anonKey, this.token),
+        Prefer: "resolution=merge-duplicates,return=representation",
+      },
+      body: JSON.stringify(body),
+    });
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(data.message || `upsert user_settings failed (${r.status})`);
+    return Array.isArray(data) ? data[0] : data;
+  }
 }

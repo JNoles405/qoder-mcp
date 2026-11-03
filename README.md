@@ -72,6 +72,7 @@ claude mcp add qoder \
 | `list_versions` | Release-history entries scoped to a project or across all your projects. |
 | `search_content` | Case-insensitive substring match across notes, ideas, concepts and daily logs. |
 | `list_daily_logs` | Journal entries scoped to a project or all projects, newest first. |
+| `list_workspace_ideas` | List ideas in the user's global workspace (the cross-project idea bank under Workspace > Ideas in the Qoder app). |
 
 ### Writes
 
@@ -86,6 +87,7 @@ claude mcp add qoder \
 | `complete_milestone` | Mark a milestone as completed. |
 | `add_daily_log` | Add a journal entry (defaults `log_date` to today UTC). |
 | `add_idea` | Capture an idea in a project's idea bank. |
+| `add_workspace_idea` | Capture an idea in the user's global workspace (cross-project idea bank). |
 
 ## Security notes
 

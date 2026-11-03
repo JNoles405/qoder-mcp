@@ -56,9 +56,11 @@ F:\Qoder\MCP\
     └── tools/
         ├── index.js       Re-exports registerReads + registerWrites.
         ├── reads.js       list_projects, get_project, list_todos, list_issues,
-        │                  list_versions, search_content, list_daily_logs (7 tools).
+        │                  list_versions, search_content, list_daily_logs,
+        │                  list_workspace_ideas (8 tools).
         └── writes.js      add_project, add_todo, complete_todo, add_note, add_version,
-                           add_milestone, complete_milestone, add_daily_log, add_idea (9 tools).
+                           add_milestone, complete_milestone, add_daily_log, add_idea,
+                           add_workspace_idea (10 tools).
 ```
 
 ### Tool handlers
@@ -71,6 +73,16 @@ Every handler returns the uniform shape `{ content: [{ type: "text", text: JSON.
 
 Qoder uses `position` columns on orderable children (todos, notes, ideas, versions, project_groups). The write tools calculate the next position by querying `?select=position&order=position.desc&limit=1` on insert, matching what the renderer does.
 
+### Workspace (cross-project idea bank)
+
+The Electron app also has a global "Workspace" that is NOT per-project — notes, ideas, and snippets that belong to the user, not to any one project. Storage is a single JSON column on `user_settings.workspace_data` with shape `{ notes: [], ideas: [], snippets: [] }`. Each item has `{ id, content, pinned, createdAt }`.
+
+The renderer reads it via `sb.get("user_settings","?user_id=eq.<id>")` and writes it via `sb.upsertSettings` (which POSTs with `Prefer: resolution=merge-duplicates`). That means **every write replaces the whole `workspace_data` object** — there is no partial JSON merge. The MCP mirrors this: `add_workspace_idea` reads the current workspace, prepends the new idea, and writes the whole thing back.
+
+Two consequences, both documented in §7:
+1. If something else (the Electron app, another MCP call) writes to `workspace_data` between the MCP's read and its write, the other write is lost. In practice the user is only in one place at a time, but worth knowing.
+2. Workspace ids are strings produced by `Date.now()+"-"+6-random-chars` (the Electron app uses just `Date.now()+""`). The random suffix keeps two MCP writes in the same millisecond from colliding.
+
 ### Status columns
 
 Projects: `planning | in-dev | beta | released | archived` (authoritative list in `App/src/constants.js` → `STATUS_CONFIG`). Issues: `open | fixed | wontfix`. Sprints: `active | ...`. These string values are not validated by zod — the server passes them through to Supabase and lets the DB (or RLS policy) reject bad values. That matches the Electron app's approach.
@@ -78,10 +90,13 @@ Projects: `planning | in-dev | beta | released | archived` (authoritative list i
 ## 6. What changed and why
 
 - **2026-11-02 — v0.1.0 initial scaffold.** 7 read tools + 9 write tools. Separate git repo. Supabase REST client duplicates the Electron app's dialect; see §1 for why. Not yet published to npm or pushed to GitHub.
+- **2026-11-03 — status enum fix.** `active` → `in-dev`. See §7.
+- **2026-11-03 — workspace ideas.** Added `add_workspace_idea` and `list_workspace_ideas`, backed by `user_settings.workspace_data`. Added `getUserSettings` / `upsertUserSettings` to the Supabase client. Tool count now 8 reads + 10 writes = 18.
 
 ## 7. Traps already paid for
 
 - **The project status is `in-dev`, not `active`.** The v0.1 scaffold documented the status enum as `planning | active | beta | released | archived` in the tool descriptions — but the Electron app's `STATUS_CONFIG` in `App/src/constants.js` uses `in-dev` for the active-development state, and that is what every row in the database has. A user filtering `list_projects` by `status: "active"` got an empty result. Fixed in a follow-up commit; the lesson is to read `STATUS_CONFIG` as the authoritative list before documenting any enum, not to guess from Supabase column names.
+- **Workspace writes are last-write-wins.** `user_settings.workspace_data` is a single JSON blob, not a relation, so there is no row-level locking the way per-project `ideas`/`notes` have. `add_workspace_idea` reads the current workspace, prepends, writes the whole thing back. If the Electron app writes to the workspace between the MCP's read and its write (user is active in both at once), that write is lost. For a single-user tool this is acceptable; if we add multi-writer support later, we need either a dedicated `workspace_ideas` table or an optimistic-concurrency check.
 
 ## 8. How things are verified
 

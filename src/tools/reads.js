@@ -237,6 +237,21 @@ export function registerReads(server, sb) {
   );
 
   server.registerTool(
+    "list_workspace_ideas",
+    {
+      title: "List workspace ideas",
+      description:
+        "List ideas in the user's global workspace (the cross-project idea bank shown under Workspace > Ideas in the Qoder app). Not scoped to any project. Newest first, matching the app.",
+      inputSchema: {},
+    },
+    async () => {
+      const row = await sb.getUserSettings();
+      const ideas = row?.workspace_data?.ideas || [];
+      return json(ideas);
+    },
+  );
+
+  server.registerTool(
     "list_daily_logs",
     {
       title: "List daily logs",
