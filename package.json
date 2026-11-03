@@ -1,0 +1,48 @@
+{
+  "name": "qoder-mcp",
+  "version": "0.1.0",
+  "description": "Model Context Protocol server for Qoder — read and write projects, todos, issues, versions, notes, milestones, daily logs, and ideas against your Qoder Supabase workspace.",
+  "type": "module",
+  "bin": {
+    "qoder-mcp": "./bin/qoder-mcp.js"
+  },
+  "main": "./src/server.js",
+  "exports": {
+    ".": "./src/server.js"
+  },
+  "files": [
+    "bin",
+    "src",
+    "README.md",
+    "HANDOVER.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "start": "node bin/qoder-mcp.js"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "qoder",
+    "supabase",
+    "claude",
+    "project-management"
+  ],
+  "author": "Benjamin Noles",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JNoles405/qoder-mcp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/JNoles405/qoder-mcp/issues"
+  },
+  "homepage": "https://github.com/JNoles405/qoder-mcp#readme",
+  "engines": {
+    "node": ">=18.17.0"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "zod": "^4.6.7"
+  }
+}
