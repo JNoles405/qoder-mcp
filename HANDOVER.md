@@ -58,9 +58,9 @@ F:\Qoder\MCP\
         ├── reads.js       list_projects, get_project, list_todos, list_issues,
         │                  list_versions, search_content, list_daily_logs,
         │                  list_workspace_ideas (8 tools).
-        └── writes.js      add_project, add_todo, complete_todo, add_note, add_version,
-                           add_milestone, complete_milestone, add_daily_log, add_idea,
-                           add_workspace_idea (10 tools).
+        └── writes.js      add_project, update_project, add_todo, complete_todo, add_note,
+                           add_version, add_milestone, complete_milestone, add_daily_log,
+                           add_idea, add_workspace_idea (11 tools).
 ```
 
 ### Tool handlers
@@ -92,6 +92,7 @@ Projects: `planning | in-dev | beta | released | archived` (authoritative list i
 - **2026-11-02 — v0.1.0 initial scaffold.** 7 read tools + 9 write tools. Separate git repo. Supabase REST client duplicates the Electron app's dialect; see §1 for why. Not yet published to npm or pushed to GitHub.
 - **2026-11-03 — status enum fix.** `active` → `in-dev`. See §7.
 - **2026-11-03 — workspace ideas.** Added `add_workspace_idea` and `list_workspace_ideas`, backed by `user_settings.workspace_data`. Added `getUserSettings` / `upsertUserSettings` to the Supabase client. Tool count now 8 reads + 10 writes = 18.
+- **2026-11-09 — first update tool.** Added `update_project` (name/description/status/tech_stack/git_url/local_folder/supabase_url/vercel_url/color). Ownership is confirmed by a pre-flight `projects?id=eq.X&user_id=eq.Y` lookup before the PATCH, giving a clear error instead of the empty array RLS would return. Empty-string on nullable columns maps to `null` so a caller can clear a field. `tech_stack` is replace, not append (documented in the tool description). Tool count now 8 reads + 11 writes = 19.
 
 ## 7. Traps already paid for
 
@@ -111,7 +112,7 @@ Projects: `planning | in-dev | beta | released | archived` (authoritative list i
 - **No publish to npm yet.** Needs: `npm login` under an account that owns `qoder-mcp` on npm; first publish `npm publish --access public`.
 - **No HTTP / SSE transport.** stdio works for Claude Desktop and Claude Code; a shared server mode would be needed for anything that wants to connect over the network.
 - **No per-tool rate limiting.** The MCP client limits concurrency naturally, but a determined caller could still hammer Supabase. If this becomes a problem, add a p-queue around the `sb` methods.
-- **No "update" or "delete" tools.** The write surface is intentionally additive-only in v0.1 to keep the blast radius small while this is new. Delete tools (`delete_todo`, `delete_note`, etc.) and update tools (`update_project_description`) are candidates for a v0.2.
+- **No delete tools; updates only for projects so far.** `update_project` lands on 2026-11-09, but there is no `update_todo` / `update_note` / `update_version` / `update_milestone` / `update_issue` / `update_idea` yet, and no `delete_*` tools at all. Follow the `update_project` pattern (ownership pre-flight via a user-scoped read, then `sb.patch`) when adding more; delete tools need an equivalent ownership check before `sb.del`.
 - **Workspace items are a JSON blob, not a relation (queued for v0.2).** `user_settings.workspace_data` holds notes, ideas, and snippets as a single JSON column; every write to it replaces the whole blob, so two writers race (see §7). Fix: dedicated `workspace_ideas` / `workspace_notes` / `workspace_snippets` tables mirroring the per-project versions (same columns: `id`, `user_id`, `content`, `pinned`, `position`, `created_at`, same RLS pattern). Needs: (1) one Supabase migration + three RLS policies, (2) a one-time copy of each user's existing `workspace_data.*` into the new tables, (3) matching Electron-app refactor replacing `saveWorkspace` + the `workspace` state with per-row CRUD and an in-app migration banner (same pattern as Phase 3.5 local-backup banner), (4) MCP swap: `add_workspace_idea` / `list_workspace_ideas` from `getUserSettings` + `upsertUserSettings` over to `sb.post` / `sb.get` against `workspace_ideas`. Worth doing when there is a second reason — making workspace ideas searchable alongside per-project ones in `search_content`, feeding them into the activity feed, or supporting SQL-level ordering/pinning. The race condition alone is unlikely to bite a single-user tool, so no urgency.
 - **Secrets rotation.** If a user changes their password, their MCP client config has to be updated manually. The server has no way to notify.
 

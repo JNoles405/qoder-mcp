@@ -44,6 +44,62 @@ export function registerWrites(server, sb) {
   );
 
   server.registerTool(
+    "update_project",
+    {
+      title: "Update project",
+      description:
+        "Edit project-level fields: name, description, status, tech_stack, git_url, local_folder, supabase_url, vercel_url, color. Only fields you pass are changed — omit anything you want to leave alone. `tech_stack` REPLACES the whole array (it does not append); to add a tag, read the project first with get_project, merge, then pass the full new list.",
+      inputSchema: {
+        id: z.string().describe("Project id (uuid)"),
+        name: z.string().optional(),
+        description: z.string().optional().describe("Pass an empty string to clear"),
+        status: z
+          .string()
+          .optional()
+          .describe("One of: planning | in-dev | beta | released | archived"),
+        tech_stack: z
+          .array(z.string())
+          .optional()
+          .describe('Replaces the whole array, e.g. ["React","Supabase","Capacitor"]'),
+        git_url: z.string().optional().describe("Pass an empty string to clear"),
+        local_folder: z.string().optional().describe("Pass an empty string to clear"),
+        supabase_url: z.string().optional().describe("Pass an empty string to clear"),
+        vercel_url: z.string().optional().describe("Pass an empty string to clear"),
+        color: z.string().optional().describe("Pass an empty string to clear"),
+      },
+    },
+    async ({ id, ...fields }) => {
+      // Build the patch body from only the fields the caller supplied.
+      // An empty string on a nullable column maps to null — that's how the user
+      // clears a value (e.g. "I don't have a git url for this one anymore").
+      const nullable = new Set([
+        "description",
+        "git_url",
+        "local_folder",
+        "supabase_url",
+        "vercel_url",
+        "color",
+      ]);
+      const body = {};
+      for (const [k, v] of Object.entries(fields)) {
+        if (v === undefined) continue;
+        body[k] = nullable.has(k) && v === "" ? null : v;
+      }
+      if (Object.keys(body).length === 0) {
+        return json({ error: "No fields to update. Pass at least one field." });
+      }
+      // Confirm ownership before patching — RLS would also catch this, but the
+      // explicit check lets us return a clear "not yours / not found" message.
+      const owned = await sb.get("projects", `?id=eq.${id}&user_id=eq.${sb.userId}&select=id`);
+      if (!owned.length) {
+        return json({ error: `No project with id ${id} for the signed-in user.` });
+      }
+      const row = await sb.patch("projects", id, body);
+      return json({ updated: row });
+    },
+  );
+
+  server.registerTool(
     "add_todo",
     {
       title: "Add todo",

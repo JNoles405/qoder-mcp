@@ -79,6 +79,7 @@ claude mcp add qoder \
 | Tool | What it does |
 | ---- | ------------ |
 | `add_project` | Create a new project. |
+| `update_project` | Edit project fields: name, description, status, tech_stack, git_url, local_folder, supabase_url, vercel_url, color. Only the fields you pass are changed. |
 | `add_todo` | Add a todo to a project. |
 | `complete_todo` | Mark a todo as completed. |
 | `add_note` | Append a note to a project. |
